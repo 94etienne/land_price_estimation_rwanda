@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Land Price Estimator & Dashboard</title>
+
+    <!-- Bootstrap -->
+    <link 
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet">
+
+    <style>
+        body { background: #f5f5f5; margin:0; padding:0; }
+
+        /* Sidebar */
+        #sidebar {
+            height: 100vh;
+            background: #343a40;
+            color: white;
+            width: 230px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding-top: 20px;
+            overflow-y: auto;
+        }
+        #sidebar a {
+            color: #fff;
+            padding: 12px;
+            display: block;
+            text-decoration: none;
+        }
+        #sidebar a:hover {
+            background: #495057;
+        }
+
+        /* Content area */
+        #pageWrapper {
+            margin-left: 240px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #content {
+            flex: 1; 
+            padding: 20px;
+        }
+
+        /* Footer */
+        footer {
+            background: #ddd;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+    <h4 class="text-center">🏡 Land System</h4>
+    <hr style="border-color:white;">
+    <a href="#" onclick="showEstimator()">🔍 Price Estimator</a>
+    <a href="#" onclick="loadDashboard()">📊 Dashboard</a>
+    <a href="#" onclick="showYears()">📅 Future Prices (5 Years)</a>
+</div>
+
+
+<!-- PAGE WRAPPER -->
+<div id="pageWrapper">
+
+    <!-- MAIN CONTENT -->
+    <div id="content">
+
+        <h2 id="pageTitle">Land Price Estimator</h2>
+
+        <!-- ================== ESTIMATOR SECTION ================== -->
+        <div id="estimatorSection">
+            <div class="card shadow p-4" style="max-width:1000px;">
+                <label><strong>Enter UPI:</strong></label>
+                <input type="text" id="upiInput" class="form-control" placeholder="3/08/05/01/1234">
+                <button class="btn btn-primary w-100 mt-3" onclick="predictPrice()">Estimate Price</button>
+                <div id="result" class="mt-4"></div>
+            </div>
+        </div>
+
+
+        <!-- ================== DASHBOARD SECTION ================== -->
+        <div id="dashboardSection" style="display:none;">
+
+            <div class="row mb-4">
+                <div class="col-md-3"><div class="card shadow p-3"><h6>Total Predictions</h6><h3 id="totalPreds">0</h3></div></div>
+                <div class="col-md-3"><div class="card shadow p-3"><h6>Average Price</h6><h4 id="avgPrice">0</h4></div></div>
+                <div class="col-md-3"><div class="card shadow p-3"><h6>Highest Price</h6><h4 id="maxPrice">0</h4></div></div>
+                <div class="col-md-3"><div class="card shadow p-3"><h6>Lowest Price</h6><h4 id="minPrice">0</h4></div></div>
+            </div>
+
+            <h4>Prediction Records</h4>
+
+            <!-- FILTER BAR -->
+            <div class="card shadow p-3 mb-3">
+                <div class="row g-2">
+                    <div class="col-md-2">
+                        <input type="text" id="filterUpi" class="form-control" placeholder="Search UPI">
+                    </div>
+
+                    <div class="col-md-2">
+                        <select id="filterDistrict" class="form-select">
+                            <option value="">District</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select id="filterSector" class="form-select">
+                            <option value="">Sector</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select id="filterLandUse" class="form-select">
+                            <option value="">Land Use</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <select id="filterZoning" class="form-select">
+                            <option value="">Zoning</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="applyFilters()">Search</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN PREDICTIONS TABLE -->
+            <table class="table table-striped table-bordered mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>UPI</th>
+                        <th>District</th>
+                        <th>Sector</th>
+                        <th>Land Use</th>
+                        <th>Zoning</th>
+                        <th>Area (m²)</th>
+                        <th>Predicted Price</th>
+                    </tr>
+                </thead>
+                <tbody id="predTable"></tbody>
+            </table>
+
+            <!-- PAGINATION -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <button class="btn btn-secondary" onclick="prevPage()">Previous</button>
+                <span id="pageInfo" class="fw-bold"></span>
+                <button class="btn btn-secondary" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+
+
+        <!-- ================== YEARS SECTION (5-YEAR PROJECTIONS) ================== -->
+        <div id="yearsSection" style="display:none;">
+            <div class="mb-4">
+                <h4>5-Year Future Price Projections</h4>
+                <p class="text-muted">
+                    Projected using a constant <strong>8% annual growth rate</strong> applied on the current estimated price.
+                </p>
+            </div>
+
+            <table class="table table-striped table-bordered mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>UPI</th>
+                        <th>District</th>
+                        <th>Sector</th>
+                        <th>Land Use</th>
+                        <th>Zoning</th>
+                        <th>Current Price</th>
+                        <th>Year 1</th>
+                        <th>Year 2</th>
+                        <th>Year 3</th>
+                        <th>Year 4</th>
+                        <th>Year 5</th>
+                    </tr>
+                </thead>
+                <tbody id="futureTable"></tbody>
+            </table>
+
+            <!-- PAGINATION FOR YEARS -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <button class="btn btn-secondary" onclick="prevFuturePage()">Previous</button>
+                <span id="futurePageInfo" class="fw-bold"></span>
+                <button class="btn btn-secondary" onclick="nextFuturePage()">Next</button>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        © 2025 Land Price Prediction System | All Rights Reserved
+    </footer>
+
+</div>
+
+
+
+<script>
+/* ============================
+    GLOBAL VARIABLES
+==============================*/
+let allRecords = [];
+let filteredRecords = [];
+let currentPage = 1;
+const pageSize = 10;
+
+// For years section
+let futurePage = 1;
+const futurePageSize = 10;
+const growthRate = 0.08;  // 8% per year
+
+
+/* ============================
+    NAVIGATION
+==============================*/
+function showEstimator() {
+    document.getElementById("pageTitle").innerText = "Land Price Estimator";
+    document.getElementById("estimatorSection").style.display = "block";
+    document.getElementById("dashboardSection").style.display = "none";
+    document.getElementById("yearsSection").style.display = "none";
+}
+
+async function loadDashboard() {
+    document.getElementById("pageTitle").innerText = "Prediction Dashboard";
+    document.getElementById("estimatorSection").style.display = "none";
+    document.getElementById("dashboardSection").style.display = "block";
+    document.getElementById("yearsSection").style.display = "none";
+
+    let res = await fetch("http://127.0.0.1:5000/predictions");
+    let data = await res.json();
+
+    allRecords = data.records;
+    filteredRecords = [...allRecords];
+
+    loadFilterOptions();
+
+    document.getElementById("totalPreds").innerText = data.statistics.total_predictions;
+    document.getElementById("avgPrice").innerText = Math.round(data.statistics.avg_price).toLocaleString();
+    document.getElementById("maxPrice").innerText = Math.round(data.statistics.max_price).toLocaleString();
+    document.getElementById("minPrice").innerText = Math.round(data.statistics.min_price).toLocaleString();
+
+    currentPage = 1;
+    renderTable();
+}
+
+async function showYears() {
+    document.getElementById("pageTitle").innerText = "Future Prices (5 Years)";
+    document.getElementById("estimatorSection").style.display = "none";
+    document.getElementById("dashboardSection").style.display = "none";
+    document.getElementById("yearsSection").style.display = "block";
+
+    // If not loaded yet, fetch predictions
+    if (allRecords.length === 0) {
+        let res = await fetch("http://127.0.0.1:5000/predictions");
+        let data = await res.json();
+        allRecords = data.records;
+    }
+
+    futurePage = 1;
+    renderFutureTable();
+}
+
+
+/* ============================
+    DASHBOARD TABLE & PAGINATION
+==============================*/
+function renderTable() {
+    let table = document.getElementById("predTable");
+    table.innerHTML = "";
+
+    let start = (currentPage - 1) * pageSize;
+    let end = start + pageSize;
+    let pageData = filteredRecords.slice(start, end);
+
+    pageData.forEach(row => {
+        table.innerHTML += `
+            <tr>
+                <td>${row.upi}</td>
+                <td>${row.district}</td>
+                <td>${row.sector}</td>
+                <td>${row.land_use}</td>
+                <td>${row.zoning}</td>
+                <td>${row.area_m2}</td>
+                <td>${Number(row.estimated_price).toLocaleString()}</td>
+            </tr>
+        `;
+    });
+
+    let totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
+    document.getElementById("pageInfo").innerText = `Page ${currentPage} of ${totalPages}`;
+}
+
+function nextPage() {
+    let totalPages = Math.ceil(filteredRecords.length / pageSize);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+    }
+}
+
+function prevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+    }
+}
+
+
+/* ============================
+    FILTERS
+==============================*/
+function applyFilters() {
+    let upi = document.getElementById("filterUpi").value.toLowerCase();
+    let district = document.getElementById("filterDistrict").value;
+    let sector = document.getElementById("filterSector").value;
+    let land_use = document.getElementById("filterLandUse").value;
+    let zoning = document.getElementById("filterZoning").value;
+
+    filteredRecords = allRecords.filter(r => 
+        (upi === "" || r.upi.toLowerCase().includes(upi)) &&
+        (district === "" || r.district === district) &&
+        (sector === "" || r.sector === sector) &&
+        (land_use === "" || r.land_use === land_use) &&
+        (zoning === "" || r.zoning === zoning)
+    );
+
+    currentPage = 1;
+    renderTable();
+}
+
+function loadFilterOptions() {
+    let dSet = new Set(allRecords.map(r => r.district));
+    let sSet = new Set(allRecords.map(r => r.sector));
+    let lSet = new Set(allRecords.map(r => r.land_use));
+    let zSet = new Set(allRecords.map(r => r.zoning));
+
+    fillDropdown("filterDistrict", dSet);
+    fillDropdown("filterSector", sSet);
+    fillDropdown("filterLandUse", lSet);
+    fillDropdown("filterZoning", zSet);
+}
+
+function fillDropdown(id, setItems) {
+    let dropdown = document.getElementById(id);
+    dropdown.innerHTML = "<option value=''>" + dropdown.options[0].text + "</option>";
+    setItems.forEach(v => dropdown.innerHTML += `<option value="${v}">${v}</option>`);
+}
+
+
+/* ============================
+    YEARS SECTION (5-YEAR PROJECTION)
+==============================*/
+function renderFutureTable() {
+    let tbody = document.getElementById("futureTable");
+    tbody.innerHTML = "";
+
+    let start = (futurePage - 1) * futurePageSize;
+    let end = start + futurePageSize;
+    let pageData = allRecords.slice(start, end);
+
+    pageData.forEach(row => {
+        let base = Number(row.estimated_price);
+        let y1 = Math.round(base * Math.pow(1 + growthRate, 1));
+        let y2 = Math.round(base * Math.pow(1 + growthRate, 2));
+        let y3 = Math.round(base * Math.pow(1 + growthRate, 3));
+        let y4 = Math.round(base * Math.pow(1 + growthRate, 4));
+        let y5 = Math.round(base * Math.pow(1 + growthRate, 5));
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${row.upi}</td>
+                <td>${row.district}</td>
+                <td>${row.sector}</td>
+                <td>${row.land_use}</td>
+                <td>${row.zoning}</td>
+                <td>${base.toLocaleString()}</td>
+                <td>${y1.toLocaleString()}</td>
+                <td>${y2.toLocaleString()}</td>
+                <td>${y3.toLocaleString()}</td>
+                <td>${y4.toLocaleString()}</td>
+                <td>${y5.toLocaleString()}</td>
+            </tr>
+        `;
+    });
+
+    let totalPages = Math.ceil(allRecords.length / futurePageSize) || 1;
+    document.getElementById("futurePageInfo").innerText = `Page ${futurePage} of ${totalPages}`;
+}
+
+function nextFuturePage() {
+    let totalPages = Math.ceil(allRecords.length / futurePageSize);
+    if (futurePage < totalPages) {
+        futurePage++;
+        renderFutureTable();
+    }
+}
+
+function prevFuturePage() {
+    if (futurePage > 1) {
+        futurePage--;
+        renderFutureTable();
+    }
+}
+
+
+/* ============================
+    PREDICT PRICE (ESTIMATOR)
+==============================*/
+async function predictPrice() {
+    let upi = document.getElementById("upiInput").value;
+    if (!upi) return alert("Enter UPI!");
+
+    let resultBox = document.getElementById("result");
+    resultBox.innerHTML = "<p class='text-info'>Processing...</p>";
+
+    try {
+        let response = await fetch(`http://127.0.0.1:5000/predict?upi=${encodeURIComponent(upi)}`);
+        let data = await response.json();
+
+        if (data.error) {
+            resultBox.innerHTML = `<div class='alert alert-danger'>${data.error}</div>`;
+            return;
+        }
+
+        resultBox.innerHTML = `
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="card shadow p-3 h-100">
+                        <h4 class="text-primary mb-3">Parcel Details</h4>
+                        <table class="table table-bordered">
+                            <tr><th>UPI</th><td>${data.upi}</td></tr>
+                            <tr><th>District</th><td>${data.district}</td></tr>
+                            <tr><th>Sector</th><td>${data.sector}</td></tr>
+                            <tr><th>Land Use</th><td>${data.land_use}</td></tr>
+                            <tr><th>Zoning</th><td>${data.zoning}</td></tr>
+                            <tr><th>Area (m²)</th><td>${data.area_m2}</td></tr>
+                            <tr><th>Distance to CBD</th><td>${data.distance_to_cbd_km} km</td></tr>
+                            <tr><th>Distance to Road</th><td>${data.distance_to_paved_road_m} m</td></tr>
+                            <tr><th>Slope</th><td>${data.slope_deg}°</td></tr>
+                            <tr><th>Amenities</th><td>${data.amenities_score}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="card shadow p-4 h-100 text-center">
+                        <h4 class="text-success mb-3">Estimated Price</h4>
+                        <p class="fs-2 fw-bold">RWF ${data.estimated_price.toLocaleString()}</p>
+                        <hr>
+                        <h5>Price per m²</h5>
+                        <p class="fs-4 fw-bold">RWF ${data.estimated_price_per_m2.toLocaleString()}</p>
+                        <hr>
+                        <h5 class="text-primary">5-Year Projection (8%/year)</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item">Year 1: <strong>${(data.estimated_price * Math.pow(1 + growthRate,1)).toFixed(0).toLocaleString()}</strong></li>
+                            <li class="list-group-item">Year 2: <strong>${(data.estimated_price * Math.pow(1 + growthRate,2)).toFixed(0).toLocaleString()}</strong></li>
+                            <li class="list-group-item">Year 3: <strong>${(data.estimated_price * Math.pow(1 + growthRate,3)).toFixed(0).toLocaleString()}</strong></li>
+                            <li class="list-group-item">Year 4: <strong>${(data.estimated_price * Math.pow(1 + growthRate,4)).toFixed(0).toLocaleString()}</strong></li>
+                            <li class="list-group-item">Year 5: <strong>${(data.estimated_price * Math.pow(1 + growthRate,5)).toFixed(0).toLocaleString()}</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    catch (err) {
+        resultBox.innerHTML = "<div class='alert alert-danger'>Failed to connect to server</div>";
+        console.error(err);
+    }
+}
+</script>
+
+</body>
+</html>
